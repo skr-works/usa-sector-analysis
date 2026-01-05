@@ -1,0 +1,34 @@
+name: US Sector Analysis Schedule
+
+on:
+  schedule:
+    # UTC 22:00 = JST 07:00
+    # Mon-Fri (UTC) = Tue-Sat (JST)
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  analyze-and-sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Analysis
+      env:
+        # 難読化した環境変数をマッピング
+        API_ENDPOINT_V1: ${{ secrets.API_ENDPOINT_V1 }}
+        CLIENT_ID_REF: ${{ secrets.CLIENT_ID_REF }}
+        APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+        TARGET_NODE_ID: ${{ secrets.TARGET_NODE_ID }}
+      run: python main.py
