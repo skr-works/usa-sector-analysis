@@ -26,7 +26,7 @@ jobs:
 
     - name: Run Analysis
       env:
-        # 難読化した環境変数をマッピング
+        # ここが重要です。Secretsを環境変数に渡す記述です。
         API_ENDPOINT_V1: ${{ secrets.API_ENDPOINT_V1 }}
         CLIENT_ID_REF: ${{ secrets.CLIENT_ID_REF }}
         APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
