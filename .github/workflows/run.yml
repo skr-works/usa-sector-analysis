@@ -24,11 +24,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run Analysis
-      # ↓↓↓ ここが原因でした。この4行がPythonに変数を渡しています ↓↓↓
       env:
-        API_ENDPOINT_V1: ${{ secrets.API_ENDPOINT_V1 }}
-        CLIENT_ID_REF: ${{ secrets.CLIENT_ID_REF }}
-        APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
-        TARGET_NODE_ID: ${{ secrets.TARGET_NODE_ID }}
-      # ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+        # ここを1つに変更しました
+        CORE_SYSTEM_CONFIG: ${{ secrets.CORE_SYSTEM_CONFIG }}
       run: python main.py
