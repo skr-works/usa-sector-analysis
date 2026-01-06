@@ -168,7 +168,6 @@ def process_data_for_chart(all_rows):
         color = colors[i % len(colors)]
         dataset = {
             "label": column,
-            # 修正: fillna(method='ffill') -> ffill()
             "data": normalized_df[column].ffill().tolist(),
             "borderColor": color,
             "backgroundColor": color,
@@ -297,25 +296,43 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
     """
     return html
 
-def sync_remote_node(content):
-    """リモートのエンドポイント(難読化済)へコンテンツを同期"""
+def parse_config_from_env():
+    """1つの環境変数から設定を解析する"""
+    raw_config = os.environ.get("CORE_SYSTEM_CONFIG", "")
+    config = {}
     
-    api_endpoint = os.environ.get("API_ENDPOINT_V1")
-    client_ref = os.environ.get("CLIENT_ID_REF")
-    secret_key = os.environ.get("APP_SECRET_KEY")
-    target_node = os.environ.get("TARGET_NODE_ID")
+    # 行ごとに分割して処理
+    for line in raw_config.splitlines():
+        line = line.strip()
+        if not line or "=" not in line:
+            continue
+            
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        
+        config[key] = value
+        
+    return config
 
-    # デバッグ: どの設定が不足しているかを表示 (値は隠す)
-    config_status = {
-        "API_ENDPOINT_V1": "Set" if api_endpoint else "MISSING",
-        "CLIENT_ID_REF": "Set" if client_ref else "MISSING",
-        "APP_SECRET_KEY": "Set" if secret_key else "MISSING",
-        "TARGET_NODE_ID": "Set" if target_node else "MISSING",
-    }
+def sync_remote_node(content):
+    """リモートのエンドポイントへコンテンツを同期"""
     
+    # 設定をパース
+    config = parse_config_from_env()
+    
+    api_endpoint = config.get("API_ENDPOINT_V1")
+    client_ref = config.get("CLIENT_ID_REF")
+    secret_key = config.get("APP_SECRET_KEY")
+    target_node = config.get("TARGET_NODE_ID")
+
+    # デバッグ情報 (値は隠す)
+    debug_info = {k: "Set" if v else "MISSING" for k, v in 
+                 {"API": api_endpoint, "USER": client_ref, "KEY": secret_key, "ID": target_node}.items()}
+
     if not all([api_endpoint, client_ref, secret_key, target_node]):
-        print("Skipping sync: Missing environment configuration.")
-        print(f"Debug Config Status: {config_status}")
+        print("Skipping sync: Missing configuration in CORE_SYSTEM_CONFIG.")
+        print(f"Debug Config: {debug_info}")
         return
 
     target_url = f"{api_endpoint.rstrip('/')}/wp-json/wp/v2/pages/{target_node}"
