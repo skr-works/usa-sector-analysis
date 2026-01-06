@@ -187,85 +187,133 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
         return "<p>データ取得に失敗しました。</p>"
 
     last_update_str = latest_df['日付'].max().strftime('%Y-%m-%d')
-    chart_id = f"usSectorChart_{random.randint(1000, 9999)}"
+    chart_id = f"sectorChart_{random.randint(1000, 9999)}"
     
-    style_grid = "display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-bottom: 20px;"
+    # グリッドスタイルを修正: 1fr 1fr の2列固定
+    style_grid = "display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;"
 
     html = f"""
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto;">
-        <p style="text-align: right; font-size: 0.8rem; color: #666; margin-bottom: 10px;">Data as of: {last_update_str} (US Market Close)</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto;">
+        <p style="text-align: right; font-size: 0.8rem; color: #666; margin-bottom: 10px;">データ更新日: {last_update_str}</p>
         
-        <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #333;">米国セクター別 過熱感・トレンド判定</h3>
+        <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #333;">短期の過熱割安判定パネル</h3>
+
         <div style="{style_grid}">
     """
 
     for _, row in latest_df.iterrows():
         sector = row['セクター名']
-        code = row['コード']
+        # code = row['コード'] # 米国版コードは非表示（参考画像に合わせる）
         change = float(row['前日比(%)'])
         rsi = float(row['RSI'])
         bb = float(row['BB%B(過熱)'])
         
-        status_text = "NORMAL"
+        # デフォルト設定 (通常)
+        status_text = "通常"
         status_style = "color: #aaa; font-size: 0.7rem; background: #f7f7f7; padding: 2px 6px; border-radius: 4px; display: inline-block;"
+        
         card_bg = "#fff"
         card_border = "1px solid #eee"
 
+        # 過熱 (赤系)
         if rsi >= 70 or bb > 1.0:
-            status_text = "HEATING UP"
-            status_style = "color: #fff; font-weight: bold; font-size: 0.8rem; background: #d32f2f; padding: 4px 8px; border-radius: 4px;"
+            status_text = "過熱"
+            status_style = (
+                "color: #fff; font-weight: 900; font-size: 1.1rem; "
+                "background: #d32f2f; padding: 6px 12px; border-radius: 6px; "
+                "box-shadow: 0 3px 6px rgba(211, 47, 47, 0.4); "
+                "display: inline-block; transform: scale(1.05);"
+            )
             card_bg = "#ffebee" 
             card_border = "2px solid #ef5350"
             
+        # 割安 (青系)
         elif rsi <= 30 or bb < 0:
-            status_text = "OVERSOLD"
-            status_style = "color: #fff; font-weight: bold; font-size: 0.8rem; background: #1976d2; padding: 4px 8px; border-radius: 4px;"
+            status_text = "割安"
+            status_style = (
+                "color: #fff; font-weight: 900; font-size: 1.1rem; "
+                "background: #1976d2; padding: 6px 12px; border-radius: 6px; "
+                "box-shadow: 0 3px 6px rgba(25, 118, 210, 0.4); "
+                "display: inline-block; transform: scale(1.05);"
+            )
             card_bg = "#e3f2fd"
             card_border = "2px solid #42a5f5"
 
         change_color = "#d32f2f" if change > 0 else ("#1976d2" if change < 0 else "#333")
         sign = "+" if change > 0 else ""
         
+        # パネルHTML生成
         html += f"""
         <div style="padding: 12px; border-radius: 6px; background: {card_bg}; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: {card_border};">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <div style="font-weight: bold; font-size: 0.95rem; color: #333;">{sector} <span style="font-size:0.8rem; color:#888; font-weight:normal;">({code})</span></div>
-                <div style="{status_style}">{status_text}</div>
+            <div style="font-weight: bold; font-size: 0.95rem; color: #333; margin-bottom: 8px;">{sector}</div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div>
+                    <div style="font-size: 0.7rem; color: #888; margin-bottom: 2px;">ETF価格前日比</div>
+                    <div style="font-size: 1.4rem; font-weight: bold; color: {change_color}; line-height: 1;">
+                        {sign}{change}<span style="font-size: 0.8rem;">%</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="{status_style}">{status_text}</div>
+                </div>
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
-                <div style="font-size: 1.5rem; font-weight: bold; color: {change_color}; line-height: 1;">
-                    {sign}{change}<span style="font-size: 0.9rem;">%</span>
-                </div>
-                <div style="font-size: 0.75rem; color: #666; text-align:right;">
-                   RSI: <strong>{rsi:.1f}</strong> / BB: <strong>{bb:.2f}</strong>
-                </div>
+            <div style="font-size: 0.75rem; color: #666; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 6px; display: flex; justify-content: space-between;">
+                <span>RSI(14): <strong>{rsi:.1f}</strong></span>
+                <span>BB: <strong>{bb:.2f}</strong></span>
             </div>
         </div>
         """
 
+    # パネル下の説明エリア
+    html += """
+        </div>
+        <div style="font-size: 0.8rem; color: #666; background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 40px; border: 1px solid #eee;">
+            <strong>【パネルの見方・判定条件】</strong><br>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                <li><strong>ETF価格前日比</strong>：米国セクターETF終値の前日比です。</li>
+                <li><strong>過熱</strong>：RSI(14日)が70以上、またはボリンジャーバンド(20日/2σ)の%Bが1.0(バンド上限)を超えた場合。</li>
+                <li><strong>割安</strong>：RSI(14日)が30以下、またはボリンジャーバンド(20日/2σ)の%Bが0(バンド下限)を下回った場合。</li>
+                <li><strong>BB</strong>：ボリンジャーバンド%B値。1.0以上でバンド上限突破、0以下でバンド下限割れを示唆します。</li>
+            </ul>
+        </div>
+    """
+
+    # Top3 表示 (日本語化)
     top3_html = ""
     if overheated_top3:
         top3_html += '<div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ffe0b2;">'
-        top3_html += '<div style="font-weight:bold; color:#e65100; margin-bottom:8px; font-size:0.95rem;">🔥 Strong Momentum (Top 3)</div>'
+        top3_html += '<div style="font-weight:bold; color:#e65100; margin-bottom:8px; font-size:0.95rem;">上昇トレンド × 過熱シグナル発生中 (Top 3)</div>'
         top3_html += '<ul style="margin: 0; padding-left: 20px; color: #333; font-size: 0.9rem;">'
         for item in overheated_top3:
-            top3_html += f"<li><strong>{item['sector']}</strong> (RSI: {item['rsi']})</li>"
+            idx_val = round(item['index_val'], 1)
+            top3_html += f"<li><strong>{item['sector']}</strong> <span style='color:#666; font-size:0.85rem;'>(300日指数: {idx_val} / RSI: {item['rsi']})</span></li>"
         top3_html += '</ul></div>'
 
     json_labels = json.dumps(chart_labels)
     json_datasets = json.dumps(chart_datasets)
 
     html += f"""
-        </div>
+        <h3 style="font-size: 1.1rem; margin-top: 40px; margin-bottom: 15px; color: #333;">長期の過熱割安判定チャート(起点100)</h3>
+        
         {top3_html}
         
-        <h3 style="font-size: 1.1rem; margin-top: 30px; margin-bottom: 10px; color: #333;">相対パフォーマンス (直近300日)</h3>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
         <div style="position: relative; width: 100%; height: 500px; border: 1px solid #eee; border-radius: 4px; padding: 5px;">
             <canvas id="{chart_id}"></canvas>
         </div>
         
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <div style="font-size: 0.8rem; color: #666; background: #f9f9f9; padding: 12px; border-radius: 6px; margin-top: 15px; border: 1px solid #eee;">
+            <strong>【チャートの仕様】</strong><br>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                <li>直近300営業日前の終値を「100」として指数化したパフォーマンス推移です。</li>
+                <li>グラフ上の凡例の四角(●)をタップすると、その業種の表示/非表示を切り替えられます。</li>
+                <li>チャート上の点をタップすると、詳細な日付と指数値が表示されます。</li>
+            </ul>
+        </div>
+        
         <script>
         (function() {{
             const ctx = document.getElementById('{chart_id}').getContext('2d');
@@ -280,14 +328,34 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
                     maintainAspectRatio: false,
                     interaction: {{ mode: 'index', intersect: false }},
                     plugins: {{
-                        legend: {{ position: 'bottom', labels: {{ boxWidth: 10, padding: 15 }} }},
+                        legend: {{ 
+                            position: 'bottom', 
+                            labels: {{ 
+                                usePointStyle: true,
+                                boxWidth: 8, 
+                                padding: 15,
+                                font: {{ size: 11 }}
+                            }} 
+                        }},
                         tooltip: {{ position: 'nearest' }}
                     }},
                     scales: {{
-                        y: {{ grid: {{ color: '#f0f0f0' }} }},
-                        x: {{ grid: {{ display: false }}, ticks: {{ maxTicksLimit: 10 }} }}
+                        y: {{ 
+                            title: {{ display: true, text: '指数' }},
+                            grid: {{ color: '#f0f0f0' }} 
+                        }},
+                        x: {{ 
+                            grid: {{ display: false }}, 
+                            ticks: {{ maxTicksLimit: 10 }} 
+                        }}
                     }},
-                    elements: {{ point: {{ radius: 0, hitRadius: 10, hoverRadius: 5 }} }}
+                    elements: {{ 
+                        point: {{ 
+                            radius: 0, 
+                            hitRadius: 10, 
+                            hoverRadius: 5 
+                        }} 
+                    }}
                 }}
             }});
         }})();
