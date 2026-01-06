@@ -2,8 +2,7 @@ name: US Sector Analysis Schedule
 
 on:
   schedule:
-    # UTC 22:00 = JST 07:00
-    # Mon-Fri (UTC) = Tue-Sat (JST)
+    # 日本時間 火〜土 朝7:00
     - cron: '0 22 * * 1-5'
   workflow_dispatch:
 
@@ -25,10 +24,11 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run Analysis
+      # ↓↓↓ ここが原因でした。この4行がPythonに変数を渡しています ↓↓↓
       env:
-        # ここが重要です。Secretsを環境変数に渡す記述です。
         API_ENDPOINT_V1: ${{ secrets.API_ENDPOINT_V1 }}
         CLIENT_ID_REF: ${{ secrets.CLIENT_ID_REF }}
         APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
         TARGET_NODE_ID: ${{ secrets.TARGET_NODE_ID }}
+      # ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
       run: python main.py
