@@ -65,7 +65,7 @@ def calculate_technical_indicators(df):
 def get_sector_data(code, name):
     """指定銘柄のデータを取得・計算し、辞書のリストとして返す"""
     try:
-        stock = yf.Ticker(code) # 米国株はサフィックスなし
+        stock = yf.Ticker(code)
         # 過去2年分取得
         hist = stock.history(period="2y")
         
@@ -84,7 +84,7 @@ def get_sector_data(code, name):
                 "コード": code,
                 "セクター名": name,
                 "日付": date_idx.strftime('%Y-%m-%d'),
-                "現在値": round(row['Close'], 2), # 米国株は小数点2位まで推奨
+                "現在値": round(row['Close'], 2),
                 "前日比(%)": round(row['change_pct'], 2),
                 "短期(5日乖離)": round(row['diff_short'], 2),
                 "中期(25日乖離)": round(row['diff_mid'], 2),
@@ -95,7 +95,6 @@ def get_sector_data(code, name):
             }
 
         results = []
-        # データフレームを辞書リストに変換
         for date_idx, row in df.iterrows():
             results.append(make_row(date_idx, row))
             
@@ -120,7 +119,6 @@ def process_data_for_chart(all_rows):
     # 1. 最新データの抽出 (パネル用)
     latest_df = df.sort_values('日付').groupby('コード').tail(1).copy()
     
-    # セクター順序を固定（コード順などで）
     latest_df['sort_key'] = latest_df['コード'].apply(lambda x: list(SECTOR_ETFS.keys()).index(x) if x in SECTOR_ETFS else 99)
     latest_df = latest_df.sort_values('sort_key')
 
@@ -128,7 +126,6 @@ def process_data_for_chart(all_rows):
     pivot_df = df.pivot(index='日付', columns='セクター名', values='現在値')
     
     if not pivot_df.empty:
-        # 最初の行を基準(100)にする
         base_prices = pivot_df.iloc[0]
         normalized_df = pivot_df.div(base_prices).mul(100).round(2)
     else:
@@ -142,7 +139,6 @@ def process_data_for_chart(all_rows):
             rsi = float(row['RSI'])
             bb = float(row['BB%B(過熱)'])
             
-            # 過熱条件
             if rsi >= 70 or bb > 1.0:
                 current_index_val = 0
                 if sector in normalized_df.columns:
@@ -154,7 +150,7 @@ def process_data_for_chart(all_rows):
                     'rsi': rsi
                 })
         
-        overheated_sectors.sort(key=lambda x: x['rsi'], reverse=True) # RSIが高い順
+        overheated_sectors.sort(key=lambda x: x['rsi'], reverse=True)
         overheated_top3 = overheated_sectors[:3]
     else:
         overheated_top3 = []
@@ -163,7 +159,6 @@ def process_data_for_chart(all_rows):
     chart_labels = normalized_df.index.strftime('%Y/%m/%d').tolist()
     chart_datasets = []
     
-    # 米国11セクター用のカラーパレット
     colors = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
         '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#393b79'
@@ -173,7 +168,8 @@ def process_data_for_chart(all_rows):
         color = colors[i % len(colors)]
         dataset = {
             "label": column,
-            "data": normalized_df[column].fillna(method='ffill').tolist(),
+            # 修正: fillna(method='ffill') -> ffill()
+            "data": normalized_df[column].ffill().tolist(),
             "borderColor": color,
             "backgroundColor": color,
             "borderWidth": 2,
@@ -211,20 +207,17 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
         rsi = float(row['RSI'])
         bb = float(row['BB%B(過熱)'])
         
-        # デザイン判定
         status_text = "NORMAL"
         status_style = "color: #aaa; font-size: 0.7rem; background: #f7f7f7; padding: 2px 6px; border-radius: 4px; display: inline-block;"
         card_bg = "#fff"
         card_border = "1px solid #eee"
 
-        # 過熱 (Red)
         if rsi >= 70 or bb > 1.0:
             status_text = "HEATING UP"
             status_style = "color: #fff; font-weight: bold; font-size: 0.8rem; background: #d32f2f; padding: 4px 8px; border-radius: 4px;"
             card_bg = "#ffebee" 
             card_border = "2px solid #ef5350"
             
-        # 割安 (Blue)
         elif rsi <= 30 or bb < 0:
             status_text = "OVERSOLD"
             status_style = "color: #fff; font-weight: bold; font-size: 0.8rem; background: #1976d2; padding: 4px 8px; border-radius: 4px;"
@@ -252,7 +245,6 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
         </div>
         """
 
-    # Top3 表示
     top3_html = ""
     if overheated_top3:
         top3_html += '<div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ffe0b2;">'
@@ -308,18 +300,24 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
 def sync_remote_node(content):
     """リモートのエンドポイント(難読化済)へコンテンツを同期"""
     
-    # 難読化された環境変数から設定を取得
     api_endpoint = os.environ.get("API_ENDPOINT_V1")
     client_ref = os.environ.get("CLIENT_ID_REF")
     secret_key = os.environ.get("APP_SECRET_KEY")
     target_node = os.environ.get("TARGET_NODE_ID")
 
+    # デバッグ: どの設定が不足しているかを表示 (値は隠す)
+    config_status = {
+        "API_ENDPOINT_V1": "Set" if api_endpoint else "MISSING",
+        "CLIENT_ID_REF": "Set" if client_ref else "MISSING",
+        "APP_SECRET_KEY": "Set" if secret_key else "MISSING",
+        "TARGET_NODE_ID": "Set" if target_node else "MISSING",
+    }
+    
     if not all([api_endpoint, client_ref, secret_key, target_node]):
         print("Skipping sync: Missing environment configuration.")
+        print(f"Debug Config Status: {config_status}")
         return
 
-    # エンドポイントの構築
-    # 想定: https://example.com/wp-json/wp/v2/pages/123
     target_url = f"{api_endpoint.rstrip('/')}/wp-json/wp/v2/pages/{target_node}"
     
     credentials = f"{client_ref}:{secret_key}"
@@ -339,7 +337,7 @@ def sync_remote_node(content):
             print("Sync successful.")
         else:
             print(f"Sync failed. Status: {response.status_code}")
-            print(response.text[:200]) # エラーの先頭だけ表示
+            print(response.text[:200])
     except Exception as e:
         print(f"Connection error: {e}")
 
@@ -347,7 +345,6 @@ def main():
     print("Starting US Sector Analysis...")
     
     all_rows = []
-    # 並列処理でデータ取得
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(get_sector_data, code, name) for code, name in SECTOR_ETFS.items()]
         for future in futures:
