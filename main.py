@@ -194,6 +194,7 @@ def generate_html_content(latest_df, chart_labels, chart_datasets, overheated_to
 
     html = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto;">
+    <p style="text-align: right; font-size: 0.8rem; color: #666; margin-bottom: 10px;">米国の前日終値から算出</p>
         
         <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #333;">短期の過熱割安判定パネル</h3>
 
