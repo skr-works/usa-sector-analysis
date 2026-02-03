@@ -2,8 +2,8 @@ name: US Sector Analysis Schedule
 
 on:
   schedule:
-    # 日本時間 火〜土 朝7:00
-    - cron: '0 22 * * 1-5'
+    # 日本時間 火〜土 朝7:22
+    - cron: '22 22 * * 1-5'
   workflow_dispatch:
 
 jobs:
