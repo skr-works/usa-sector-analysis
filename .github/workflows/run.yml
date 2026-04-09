@@ -9,14 +9,21 @@ on:
 jobs:
   analyze-and-sync:
     runs-on: ubuntu-latest
+    # 必須構成: 書き込み権限の付与
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        # 必須構成: 履歴を取得して最終更新日を判定可能にする
+        fetch-depth: 0
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
+        # 必須構成: Python 3.11
         python-version: '3.11'
 
     - name: Install dependencies
@@ -28,3 +35,20 @@ jobs:
         # ここを1つに変更しました
         CORE_SYSTEM_CONFIG: ${{ secrets.CORE_SYSTEM_CONFIG }}
       run: python main.py
+
+    - name: Keepalive Workflow (Prevent 60 days suspension)
+      # 必須構成: 外部アクションを使用せず、50日経過で空コミット
+      run: |
+        LAST_COMMIT_DATE=$(git log -1 --format=%ct)
+        CURRENT_DATE=$(date +%s)
+        DIFF_DAYS=$(( (CURRENT_DATE - LAST_COMMIT_DATE) / 86400 ))
+        
+        if [ $DIFF_DAYS -ge 50 ]; then
+          echo "Last commit was $DIFF_DAYS days ago. Creating empty commit..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive: prevent workflow suspension"
+          git push
+        else
+          echo "Last commit was $DIFF_DAYS days ago. No action needed."
+        fi
